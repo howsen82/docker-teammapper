@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  teammapper:
+    container_name: teammapper
+    image: ghcr.io/b310-digital/teammapper:latest
+    hostname: teammapper
+    mem_limit: 1g
+    cpu_shares: 768
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:3000
+    ports:
+      - 3000:3000
+    environment:
+      - MODE=PROD
+      - BINDING=0.0.0.0
+      - POSTGRES_HOST=teammapper-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_SSL=false
+      - POSTGRES_SSL_REJECT_UNAUTHORIZED=false
+      - POSTGRES_DATABASE=teammapper
+      - POSTGRES_USER=teammapperuser
+      - POSTGRES_PASSWORD=teammapperpass
+      - POSTGRES_QUERY_TIMEOUT=100000
+      - POSTGRES_STATEMENT_TIMEOUT=100000
+      - DELETE_AFTER_DAYS=30
+    restart: on-failure:5
+    depends_on:
+      db:
+        condition: service_started
+
+  db:
+    image: postgres
+    container_name: teammapper-db
+    hostname: teammapper-db
+    environment:
+      POSTGRES_DB: teammapper
+      POSTGRES_USER: teammapperuser
+      POSTGRES_PASSWORD: teammapperpass
+    volumes:
+      - /data/teammapperdb:/var/lib/postgresql/data:rw
+    mem_limit: 1g
+    cpu_shares: 768
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "teammapper", "-U", "teammapperuser"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+    restart: on-failure:5
+
+# https://github.com/b310-digital/teammapper
